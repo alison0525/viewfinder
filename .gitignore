@@ -1,0 +1,6 @@
+# Local Codex guidance
+AGENTS.md
+
+# Machine-specific files
+.DS_Store
+.idea/
