@@ -3,6 +3,7 @@ AGENTS.md
 
 # Machine-specific files
 .DS_Store
+docs/
 .idea/
 
 # Local environment configuration
