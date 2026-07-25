@@ -26,7 +26,6 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     compileOnly 'org.projectlombok:lombok'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
-    runtimeOnly 'com.h2database:h2'
     runtimeOnly 'org.postgresql:postgresql'
     annotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
@@ -34,11 +33,17 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-validation-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
+    testImplementation 'org.testcontainers:testcontainers-postgresql'
     testCompileOnly 'org.projectlombok:lombok'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testAnnotationProcessor 'org.projectlombok:lombok'
 }
 
 tasks.named('test') {
+    // JUnit 5 기반 테스트 엔진 사용 지정
     useJUnitPlatform()
+    // 테스트 실행 중 활성화할 Spring 프로필 이름 전달
+    systemProperty 'spring.profiles.active', 'test'
 }

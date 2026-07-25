@@ -4,3 +4,12 @@ AGENTS.md
 # Machine-specific files
 .DS_Store
 .idea/
+
+# Local environment configuration
+.env
+.env.*
+!.env.example
+
+# Gemini CLI local settings
+.gemini/
+gha-creds-*.json

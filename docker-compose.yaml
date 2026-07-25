@@ -1,0 +1,36 @@
+name: viewfinder
+
+services:
+  postgis:
+    # 공식 PostgreSQL 16 + PostGIS 이미지 사용
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-viewfinder}
+      POSTGRES_USER: ${POSTGRES_USER:-viewfinder}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-viewfinder}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7.0.15-alpine
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgis_data:
+  redis_data:
