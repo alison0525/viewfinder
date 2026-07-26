@@ -3,12 +3,15 @@ package com.viewfinder.domain.user.controller;
 import com.viewfinder.domain.user.dto.SignUpRequest;
 import com.viewfinder.domain.user.dto.SignUpResponse;
 import com.viewfinder.domain.user.dto.LoginRequest;
+import com.viewfinder.domain.user.dto.LoginResult;
 import com.viewfinder.domain.user.dto.LoginResponse;
 import com.viewfinder.domain.user.service.UserService;
+import com.viewfinder.global.jwt.JwtCookieProvider;
 import com.viewfinder.global.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -23,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserController {
 
     private final UserService userService;
+    private final JwtCookieProvider jwtCookieProvider;
 
     // 로컬 회원가입 요청을 처리하고 생성된 User 정보를 201 응답으로 반환
     @PostMapping("/signup")
@@ -41,8 +45,16 @@ public class UserController {
     public ResponseEntity<ApiResponse<LoginResponse>> login(
             @Valid @RequestBody LoginRequest request
     ) {
-        LoginResponse response = userService.login(request);
+        LoginResult loginResult = userService.login(request);
 
-        return ResponseEntity.ok(ApiResponse.success(response));
+        return ResponseEntity.ok()
+                // Token 값은 JSON 본문이 아닌 HttpOnly Cookie 헤더로만 전달
+                .header(HttpHeaders.SET_COOKIE, jwtCookieProvider
+                        .createAccessTokenCookie(loginResult.accessToken())
+                        .toString())
+                .header(HttpHeaders.SET_COOKIE, jwtCookieProvider
+                        .createRefreshTokenCookie(loginResult.refreshToken())
+                        .toString())
+                .body(ApiResponse.success(loginResult.loginResponse()));
     }
 }

@@ -2,18 +2,24 @@ package com.viewfinder.domain.user.controller;
 
 import com.viewfinder.domain.user.dto.SignUpResponse;
 import com.viewfinder.domain.user.dto.LoginResponse;
+import com.viewfinder.domain.user.dto.LoginResult;
 import com.viewfinder.domain.user.service.UserService;
+import com.viewfinder.global.jwt.JwtCookieProvider;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseCookie;
+import org.springframework.http.HttpHeaders;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -29,6 +35,10 @@ class UserControllerTest {
     // Controller가 호출할 Service Bean을 테스트 대역으로 교체
     @MockitoBean
     private UserService userService;
+
+    // Controller가 발급할 HttpOnly Cookie 생성 Bean을 테스트 대역으로 교체
+    @MockitoBean
+    private JwtCookieProvider jwtCookieProvider;
 
     @Test
     void signsUpUserAndReturnsCreatedResponse() throws Exception {
@@ -70,7 +80,15 @@ class UserControllerTest {
     @Test
     void logsInUserAndReturnsSuccessResponse() throws Exception {
         given(userService.login(any()))
-                .willReturn(new LoginResponse(1L, "user@example.com", "viewfinder"));
+                .willReturn(new LoginResult(
+                        new LoginResponse(1L, "user@example.com", "viewfinder"),
+                        "access-token",
+                        "refresh-token"
+                ));
+        given(jwtCookieProvider.createAccessTokenCookie("access-token"))
+                .willReturn(ResponseCookie.from("access_token", "access-token").httpOnly(true).build());
+        given(jwtCookieProvider.createRefreshTokenCookie("refresh-token"))
+                .willReturn(ResponseCookie.from("refresh_token", "refresh-token").httpOnly(true).build());
 
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -83,7 +101,11 @@ class UserControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.id").value(1))
-                .andExpect(jsonPath("$.data.email").value("user@example.com"));
+                .andExpect(jsonPath("$.data.email").value("user@example.com"))
+                .andExpect(header().string(HttpHeaders.SET_COOKIE,
+                        org.hamcrest.Matchers.containsString("access_token")))
+                .andExpect(result -> assertThat(result.getResponse().getHeaders(HttpHeaders.SET_COOKIE))
+                        .anyMatch(cookie -> cookie.contains("refresh_token")));
     }
 
     @Test

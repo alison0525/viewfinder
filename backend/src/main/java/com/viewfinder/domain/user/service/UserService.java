@@ -3,12 +3,14 @@ package com.viewfinder.domain.user.service;
 import com.viewfinder.domain.user.dto.SignUpRequest;
 import com.viewfinder.domain.user.dto.SignUpResponse;
 import com.viewfinder.domain.user.dto.LoginRequest;
+import com.viewfinder.domain.user.dto.LoginResult;
 import com.viewfinder.domain.user.dto.LoginResponse;
 import com.viewfinder.domain.user.entity.User;
 import com.viewfinder.domain.user.enums.Provider;
 import com.viewfinder.domain.user.exception.UserErrorCode;
 import com.viewfinder.domain.user.repository.UserRepository;
 import com.viewfinder.global.exception.BusinessException;
+import com.viewfinder.global.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -23,6 +25,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtTokenProvider jwtTokenProvider;
 
     // 로컬 회원가입의 중복 검증·비밀번호 암호화·User 저장 처리
     @Transactional
@@ -42,7 +45,7 @@ public class UserService {
     }
 
     // 로컬 계정 이메일·BCrypt 비밀번호를 검증하고 로그인 User 정보 반환
-    public LoginResponse login(LoginRequest request) {
+    public LoginResult login(LoginRequest request) {
         User user = userRepository.findByEmail(request.email())
                 // 이메일 존재 여부를 노출하지 않는 공통 로그인 실패 오류 반환
                 .orElseThrow(() -> new BusinessException(UserErrorCode.LOGIN_FAILED));
@@ -53,7 +56,11 @@ public class UserService {
             throw new BusinessException(UserErrorCode.LOGIN_FAILED);
         }
 
-        return new LoginResponse(user.getId(), user.getEmail(), user.getNickname());
+        LoginResponse loginResponse = new LoginResponse(user.getId(), user.getEmail(), user.getNickname());
+        String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getRole());
+        String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
+
+        return new LoginResult(loginResponse, accessToken, refreshToken);
     }
 
     // 이메일·닉네임 유니크 제약 위반 전 사용자용 오류 반환

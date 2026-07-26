@@ -4,13 +4,16 @@ import com.viewfinder.TestcontainersConfiguration;
 import com.viewfinder.domain.user.dto.SignUpRequest;
 import com.viewfinder.domain.user.dto.SignUpResponse;
 import com.viewfinder.domain.user.dto.LoginRequest;
+import com.viewfinder.domain.user.dto.LoginResult;
 import com.viewfinder.domain.user.dto.LoginResponse;
 import com.viewfinder.domain.user.entity.User;
 import com.viewfinder.domain.user.exception.UserErrorCode;
 import com.viewfinder.domain.user.repository.UserRepository;
 import com.viewfinder.global.config.JpaAuditingConfig;
+import com.viewfinder.global.config.JwtConfig;
 import com.viewfinder.global.config.PasswordEncoderConfig;
 import com.viewfinder.global.exception.BusinessException;
+import com.viewfinder.global.jwt.JwtTokenProvider;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -29,6 +32,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @Import({
         UserService.class,
         PasswordEncoderConfig.class,
+        JwtConfig.class,
+        JwtTokenProvider.class,
         JpaAuditingConfig.class,
         TestcontainersConfiguration.class
 })
@@ -86,12 +91,14 @@ class UserServiceTest {
         String encodedPassword = passwordEncoder.encode("password1234");
         userRepository.saveAndFlush(User.createLocal("user@example.com", encodedPassword, "viewfinder"));
 
-        LoginResponse response = userService.login(
+        LoginResult result = userService.login(
                 new LoginRequest("user@example.com", "password1234")
         );
 
-        assertThat(response.email()).isEqualTo("user@example.com");
-        assertThat(response.nickname()).isEqualTo("viewfinder");
+        assertThat(result.loginResponse().email()).isEqualTo("user@example.com");
+        assertThat(result.loginResponse().nickname()).isEqualTo("viewfinder");
+        assertThat(result.accessToken()).isNotBlank();
+        assertThat(result.refreshToken()).isNotBlank();
     }
 
     @Test

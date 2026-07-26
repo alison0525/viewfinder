@@ -3,6 +3,7 @@ package com.viewfinder.global.config;
 import com.viewfinder.domain.user.controller.UserController;
 import com.viewfinder.domain.user.dto.SignUpResponse;
 import com.viewfinder.domain.user.service.UserService;
+import com.viewfinder.global.jwt.JwtCookieProvider;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -28,6 +29,10 @@ class SecurityConfigTest {
     // 회원가입 Controller가 호출할 Service Bean을 테스트 대역으로 교체
     @MockitoBean
     private UserService userService;
+
+    // UserController 생성에 필요한 Cookie Provider Bean을 테스트 대역으로 교체
+    @MockitoBean
+    private JwtCookieProvider jwtCookieProvider;
 
     @Test
     void permitsAuthenticationStartEndpointWithoutLogin() throws Exception {
