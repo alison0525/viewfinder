@@ -1,6 +1,7 @@
 package com.viewfinder.global.jwt;
 
 import com.viewfinder.global.config.JwtProperties;
+import com.viewfinder.domain.user.enums.Role;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -20,10 +21,12 @@ class JwtTokenProviderTest {
 
     @Test
     void createsAndParsesAccessToken() {
-        String accessToken = jwtTokenProvider.createAccessToken(1L);
+        String accessToken = jwtTokenProvider.createAccessToken(1L, Role.USER);
 
         assertThat(jwtTokenProvider.isValidToken(accessToken)).isTrue();
         assertThat(jwtTokenProvider.getUserId(accessToken)).isEqualTo(1L);
+        assertThat(jwtTokenProvider.getTokenType(accessToken)).isEqualTo(TokenType.ACCESS);
+        assertThat(jwtTokenProvider.getRole(accessToken)).isEqualTo(Role.USER);
     }
 
     @Test
@@ -32,6 +35,7 @@ class JwtTokenProviderTest {
 
         assertThat(jwtTokenProvider.isValidToken(refreshToken)).isTrue();
         assertThat(jwtTokenProvider.getUserId(refreshToken)).isEqualTo(2L);
+        assertThat(jwtTokenProvider.getTokenType(refreshToken)).isEqualTo(TokenType.REFRESH);
     }
 
     @Test
@@ -44,7 +48,7 @@ class JwtTokenProviderTest {
                 )
         );
 
-        String expiredToken = expiredTokenProvider.createAccessToken(1L);
+        String expiredToken = expiredTokenProvider.createAccessToken(1L, Role.USER);
 
         assertThat(expiredTokenProvider.isValidToken(expiredToken)).isFalse();
     }
