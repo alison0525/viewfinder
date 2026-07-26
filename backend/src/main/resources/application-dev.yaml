@@ -12,3 +12,7 @@ spring:
       # 테이블 생성·변경은 Flyway SQL만 담당하고, Hibernate는 Entity와 DB 구조 일치 여부만 확인
       ddl-auto: validate
     show-sql: true
+
+jwt:
+  # 로컬 실행 환경에서 주입한 HMAC 비밀키 사용
+  secret: ${JWT_SECRET}

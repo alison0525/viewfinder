@@ -1,0 +1,3 @@
+jwt:
+  # 테스트 전용 HMAC 비밀키 지정
+  secret: test-jwt-secret-must-be-longer-than-thirty-two-bytes

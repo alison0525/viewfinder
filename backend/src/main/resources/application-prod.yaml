@@ -10,3 +10,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
+
+jwt:
+  # 운영 환경변수에서만 HMAC 비밀키 주입
+  secret: ${JWT_SECRET}
