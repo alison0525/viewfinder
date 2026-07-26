@@ -3,6 +3,8 @@ package com.viewfinder.domain.user.service;
 import com.viewfinder.TestcontainersConfiguration;
 import com.viewfinder.domain.user.dto.SignUpRequest;
 import com.viewfinder.domain.user.dto.SignUpResponse;
+import com.viewfinder.domain.user.dto.LoginRequest;
+import com.viewfinder.domain.user.dto.LoginResponse;
 import com.viewfinder.domain.user.entity.User;
 import com.viewfinder.domain.user.exception.UserErrorCode;
 import com.viewfinder.domain.user.repository.UserRepository;
@@ -77,5 +79,41 @@ class UserServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting(exception -> ((BusinessException) exception).getErrorCode())
                 .isEqualTo(UserErrorCode.NICKNAME_ALREADY_EXISTS);
+    }
+
+    @Test
+    void logsInWithMatchingLocalAccountPassword() {
+        String encodedPassword = passwordEncoder.encode("password1234");
+        userRepository.saveAndFlush(User.createLocal("user@example.com", encodedPassword, "viewfinder"));
+
+        LoginResponse response = userService.login(
+                new LoginRequest("user@example.com", "password1234")
+        );
+
+        assertThat(response.email()).isEqualTo("user@example.com");
+        assertThat(response.nickname()).isEqualTo("viewfinder");
+    }
+
+    @Test
+    void rejectsUnknownEmailWithGenericLoginError() {
+        assertThatThrownBy(() -> userService.login(
+                new LoginRequest("unknown@example.com", "password1234")
+        ))
+                .isInstanceOf(BusinessException.class)
+                .extracting(exception -> ((BusinessException) exception).getErrorCode())
+                .isEqualTo(UserErrorCode.LOGIN_FAILED);
+    }
+
+    @Test
+    void rejectsWrongPasswordWithGenericLoginError() {
+        String encodedPassword = passwordEncoder.encode("password1234");
+        userRepository.saveAndFlush(User.createLocal("user@example.com", encodedPassword, "viewfinder"));
+
+        assertThatThrownBy(() -> userService.login(
+                new LoginRequest("user@example.com", "wrong-password")
+        ))
+                .isInstanceOf(BusinessException.class)
+                .extracting(exception -> ((BusinessException) exception).getErrorCode())
+                .isEqualTo(UserErrorCode.LOGIN_FAILED);
     }
 }

@@ -2,7 +2,10 @@ package com.viewfinder.domain.user.service;
 
 import com.viewfinder.domain.user.dto.SignUpRequest;
 import com.viewfinder.domain.user.dto.SignUpResponse;
+import com.viewfinder.domain.user.dto.LoginRequest;
+import com.viewfinder.domain.user.dto.LoginResponse;
 import com.viewfinder.domain.user.entity.User;
+import com.viewfinder.domain.user.enums.Provider;
 import com.viewfinder.domain.user.exception.UserErrorCode;
 import com.viewfinder.domain.user.repository.UserRepository;
 import com.viewfinder.global.exception.BusinessException;
@@ -11,7 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-// User 도메인의 회원가입 규칙을 처리하는 Service 지정
+// User 도메인의 회원가입·로그인 규칙을 처리하는 Service 지정
 @Service
 @Transactional(readOnly = true)
 // final 의존성을 받는 생성자를 Lombok이 자동 생성
@@ -36,6 +39,21 @@ public class UserService {
                 savedUser.getEmail(),
                 savedUser.getNickname()
         );
+    }
+
+    // 로컬 계정 이메일·BCrypt 비밀번호를 검증하고 로그인 User 정보 반환
+    public LoginResponse login(LoginRequest request) {
+        User user = userRepository.findByEmail(request.email())
+                // 이메일 존재 여부를 노출하지 않는 공통 로그인 실패 오류 반환
+                .orElseThrow(() -> new BusinessException(UserErrorCode.LOGIN_FAILED));
+
+        // 소셜 계정이거나 입력 비밀번호가 저장된 BCrypt 해시와 다르면 동일 오류 반환
+        if (user.getProvider() != Provider.LOCAL
+                || !passwordEncoder.matches(request.password(), user.getPassword())) {
+            throw new BusinessException(UserErrorCode.LOGIN_FAILED);
+        }
+
+        return new LoginResponse(user.getId(), user.getEmail(), user.getNickname());
     }
 
     // 이메일·닉네임 유니크 제약 위반 전 사용자용 오류 반환
