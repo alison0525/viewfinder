@@ -50,6 +50,14 @@ class GlobalExceptionHandlerTest {
                 .andExpect(jsonPath("$.error.code").value("COMMON_001"));
     }
 
+    @Test
+    void returnsDynamicBusinessExceptionMessage() throws Exception {
+        mockMvc.perform(post("/test/dynamic-message"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("COMMON_001"))
+                .andExpect(jsonPath("$.error.message").value("카카오로 로그인해 주세요."));
+    }
+
     // 예외 처리 테스트 전용 요청 진입점 정의
     @RestController
     @RequestMapping("/test")
@@ -64,6 +72,15 @@ class GlobalExceptionHandlerTest {
         // @Valid 변환 확인용 요청 DTO와 API 정의
         @PostMapping("/validation-error")
         void validationError(@Valid @RequestBody ValidationRequest request) {
+        }
+
+        // 상황별 오류 메시지 변환 확인용 예외 발생 API 정의
+        @PostMapping("/dynamic-message")
+        void dynamicMessage() {
+            throw new BusinessException(
+                    CommonErrorCode.INVALID_INPUT_VALUE,
+                    "카카오로 로그인해 주세요."
+            );
         }
     }
 

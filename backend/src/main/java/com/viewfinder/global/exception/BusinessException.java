@@ -11,6 +11,12 @@ public class BusinessException extends RuntimeException {
         this.errorCode = errorCode;
     }
 
+    // 상황별 안내 메시지와 ErrorCode를 가진 예외 생성
+    public BusinessException(ErrorCode errorCode, String message) {
+        super(message);
+        this.errorCode = errorCode;
+    }
+
     // 전역 예외 처리기가 HTTP 응답 생성에 사용할 ErrorCode 반환
     public ErrorCode getErrorCode() {
         return errorCode;

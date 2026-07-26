@@ -13,7 +13,7 @@ public class GlobalExceptionHandler {
     // 서비스 규칙 위반 예외를 ErrorCode에 맞는 HTTP 응답으로 변환
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException exception) {
-        return errorResponse(exception.getErrorCode());
+        return errorResponse(exception.getErrorCode(), exception.getMessage());
     }
 
     // @Valid 요청 DTO 검증 실패를 400 공통 오류 응답으로 변환
@@ -30,8 +30,13 @@ public class GlobalExceptionHandler {
 
     // ErrorCode의 HTTP 상태와 JSON 오류 본문을 함께 생성
     private ResponseEntity<ErrorResponse> errorResponse(ErrorCode errorCode) {
+        return errorResponse(errorCode, errorCode.message());
+    }
+
+    // ErrorCode의 HTTP 상태와 상황별 오류 메시지를 함께 생성
+    private ResponseEntity<ErrorResponse> errorResponse(ErrorCode errorCode, String message) {
         return ResponseEntity
                 .status(errorCode.status())
-                .body(ErrorResponse.of(errorCode.code(), errorCode.message()));
+                .body(ErrorResponse.of(errorCode.code(), message));
     }
 }
