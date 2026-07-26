@@ -19,3 +19,6 @@ spring:
 jwt:
   # 로컬 실행 환경에서 주입한 HMAC 비밀키 사용
   secret: ${JWT_SECRET}
+  cookie:
+    # localhost HTTP 개발 환경에서도 Cookie 전달 허용
+    secure: false

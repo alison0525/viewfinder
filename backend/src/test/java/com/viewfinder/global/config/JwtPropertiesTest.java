@@ -15,7 +15,8 @@ class JwtPropertiesTest {
             .withPropertyValues(
                     "jwt.secret=test-jwt-secret-must-be-longer-than-thirty-two-bytes",
                     "jwt.access-token-expiration=30m",
-                    "jwt.refresh-token-expiration=14d"
+                    "jwt.refresh-token-expiration=14d",
+                    "jwt.cookie.same-site=Lax"
             );
 
     @Test

@@ -14,3 +14,6 @@ spring:
 jwt:
   # 운영 환경변수에서만 HMAC 비밀키 주입
   secret: ${JWT_SECRET}
+  cookie:
+    # 운영 HTTPS 환경에서만 Cookie 전송 허용
+    secure: true
