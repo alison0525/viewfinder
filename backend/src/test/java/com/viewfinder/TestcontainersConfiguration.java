@@ -20,7 +20,6 @@ class TestcontainersConfiguration {
                 // 로컬 개발·CI 테스트에서 공통으로 사용하는 공식 PostGIS 이미지 지정
                 DockerImageName.parse("postgis/postgis:16-3.4")
                         .asCompatibleSubstituteFor("postgres")
-        // 테스트마다 새로 생성되는 빈 DB에 postgis-init.sql 실행 지정
-        ).withInitScript("postgis-init.sql");
+        );
     }
 }

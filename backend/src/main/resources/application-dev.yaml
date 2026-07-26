@@ -9,5 +9,6 @@ spring:
       port: ${REDIS_PORT:6379}
   jpa:
     hibernate:
-      ddl-auto: update
+      # 테이블 생성·변경은 Flyway SQL만 담당하고, Hibernate는 Entity와 DB 구조 일치 여부만 확인
+      ddl-auto: validate
     show-sql: true
