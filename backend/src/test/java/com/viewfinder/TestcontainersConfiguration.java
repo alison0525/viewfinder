@@ -9,7 +9,7 @@ import org.testcontainers.utility.DockerImageName;
 // @SpringBootTest에서만 불러오는 테스트 전용 Spring 설정 클래스 지정
 // 현재는 Bean 메서드끼리 호출하지 않으므로 프록시가 필요 없어 테스트 시작 비용 절감
 @TestConfiguration(proxyBeanMethods = false)
-class TestcontainersConfiguration {
+public class TestcontainersConfiguration {
 
     // 반환한 PostgreSQLContainer 객체를 Spring Bean으로 등록
     @Bean
