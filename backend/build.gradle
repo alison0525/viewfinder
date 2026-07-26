@@ -24,6 +24,10 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    // Spring Boot 시작 시 Flyway 마이그레이션 자동 실행을 포함한 스타터
+    implementation 'org.springframework.boot:spring-boot-starter-flyway'
+    // Flyway의 PostgreSQL 데이터베이스 지원 모듈
+    implementation 'org.flywaydb:flyway-database-postgresql'
     compileOnly 'org.projectlombok:lombok'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     runtimeOnly 'org.postgresql:postgresql'

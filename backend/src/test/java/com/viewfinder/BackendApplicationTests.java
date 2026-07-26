@@ -25,10 +25,29 @@ class BackendApplicationTests {
 
     @Test
     void postgisIsAvailable() {
-        // PostgreSQL 연결뿐 아니라 PostGIS 확장 함수의 실제 실행 여부 확인
+        // Flyway V1 마이그레이션으로 생성한 PostGIS 확장 함수의 실제 실행 여부 확인
         String version = jdbcTemplate.queryForObject("SELECT PostGIS_Version()", String.class);
 
         assertThat(version).isNotBlank();
+    }
+
+    @Test
+    void flywayMigratesInitialSchema() {
+        Integer migrationCount = jdbcTemplate.queryForObject("""
+                SELECT count(*)
+                FROM flyway_schema_history
+                WHERE success = TRUE
+                  AND version IN ('1', '2')
+                """, Integer.class);
+        Integer tableCount = jdbcTemplate.queryForObject("""
+                SELECT count(*)
+                FROM information_schema.tables
+                WHERE table_schema = 'public'
+                  AND table_name IN ('users', 'spots', 'posts')
+                """, Integer.class);
+
+        assertThat(migrationCount).isEqualTo(2);
+        assertThat(tableCount).isEqualTo(3);
     }
 
 }
