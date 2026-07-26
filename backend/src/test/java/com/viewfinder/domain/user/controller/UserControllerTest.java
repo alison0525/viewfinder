@@ -1,6 +1,7 @@
 package com.viewfinder.domain.user.controller;
 
 import com.viewfinder.domain.user.dto.SignUpResponse;
+import com.viewfinder.domain.user.dto.LoginResponse;
 import com.viewfinder.domain.user.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,6 +60,40 @@ class UserControllerTest {
                                   "email": "invalid-email",
                                   "password": "short",
                                   "nickname": ""
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("COMMON_001"));
+    }
+
+    @Test
+    void logsInUserAndReturnsSuccessResponse() throws Exception {
+        given(userService.login(any()))
+                .willReturn(new LoginResponse(1L, "user@example.com", "viewfinder"));
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "user@example.com",
+                                  "password": "password1234"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value(1))
+                .andExpect(jsonPath("$.data.email").value("user@example.com"));
+    }
+
+    @Test
+    void rejectsInvalidLoginRequest() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "invalid-email",
+                                  "password": ""
                                 }
                                 """))
                 .andExpect(status().isBadRequest())

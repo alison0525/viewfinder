@@ -2,6 +2,8 @@ package com.viewfinder.domain.user.controller;
 
 import com.viewfinder.domain.user.dto.SignUpRequest;
 import com.viewfinder.domain.user.dto.SignUpResponse;
+import com.viewfinder.domain.user.dto.LoginRequest;
+import com.viewfinder.domain.user.dto.LoginResponse;
 import com.viewfinder.domain.user.service.UserService;
 import com.viewfinder.global.response.ApiResponse;
 import jakarta.validation.Valid;
@@ -32,5 +34,15 @@ public class UserController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success(response));
+    }
+
+    // 로컬 로그인 요청을 처리하고 확인된 User 정보를 성공 응답으로 반환
+    @PostMapping("/login")
+    public ResponseEntity<ApiResponse<LoginResponse>> login(
+            @Valid @RequestBody LoginRequest request
+    ) {
+        LoginResponse response = userService.login(request);
+
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 }
