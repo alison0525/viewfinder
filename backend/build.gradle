@@ -28,6 +28,11 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-flyway'
     // Flyway의 PostgreSQL 데이터베이스 지원 모듈
     implementation 'org.flywaydb:flyway-database-postgresql'
+    // JWT 생성·검증에 사용하는 공개 API 모듈
+    implementation 'io.jsonwebtoken:jjwt-api:0.13.0'
+    // JJWT 내부 구현과 Jackson JSON 처리 모듈을 런타임에만 추가
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.13.0'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.13.0'
     compileOnly 'org.projectlombok:lombok'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     runtimeOnly 'org.postgresql:postgresql'
