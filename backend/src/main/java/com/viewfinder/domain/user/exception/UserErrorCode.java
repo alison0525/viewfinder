@@ -9,7 +9,9 @@ public enum UserErrorCode implements ErrorCode {
     // 동일 이메일의 로컬 회원가입 중복 오류 정의
     EMAIL_ALREADY_EXISTS(HttpStatus.CONFLICT, "USER_001", "이미 사용 중인 이메일입니다."),
     // 동일 닉네임의 회원가입 중복 오류 정의
-    NICKNAME_ALREADY_EXISTS(HttpStatus.CONFLICT, "USER_002", "이미 사용 중인 닉네임입니다.");
+    NICKNAME_ALREADY_EXISTS(HttpStatus.CONFLICT, "USER_002", "이미 사용 중인 닉네임입니다."),
+    // 이메일 존재 여부와 비밀번호 일치 여부를 함께 숨기는 로그인 실패 오류 정의
+    LOGIN_FAILED(HttpStatus.UNAUTHORIZED, "USER_003", "이메일 또는 비밀번호가 올바르지 않습니다.");
 
     private final HttpStatus status;
     private final String code;
