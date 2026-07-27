@@ -84,7 +84,7 @@ public class UserService {
 
             Long userId = jwtTokenProvider.getUserId(refreshToken);
             refreshTokenStore.findByUserId(userId)
-                    // 이전 기기의 토큰이 최신 로그인 토큰을 삭제하지 않도록 현재 저장값 일치 확인
+                    // 사용자 ID만 보고 삭제하면 이전 기기 Token이 Redis의 최신 로그인 Token까지 삭제하므로 현재 저장값 일치 확인
                     .filter(savedRefreshToken -> savedRefreshToken.equals(refreshToken))
                     .ifPresent(savedRefreshToken -> refreshTokenStore.deleteByUserId(userId));
         } catch (IllegalArgumentException exception) {
