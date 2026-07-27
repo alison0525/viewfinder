@@ -127,4 +127,21 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value("COMMON_001"));
     }
+
+    @Test
+    void expiresTokenCookiesOnLogout() throws Exception {
+        given(jwtCookieProvider.expireAccessTokenCookie())
+                .willReturn(ResponseCookie.from("access_token", "").maxAge(0).path("/").build());
+        given(jwtCookieProvider.expireRefreshTokenCookie())
+                .willReturn(ResponseCookie.from("refresh_token", "").maxAge(0).path("/api/v1/auth").build());
+
+        mockMvc.perform(post("/api/v1/auth/logout"))
+                .andExpect(status().isNoContent())
+                .andExpect(header().string(HttpHeaders.SET_COOKIE,
+                        org.hamcrest.Matchers.containsString("access_token=")))
+                .andExpect(result -> assertThat(result.getResponse().getHeaders(HttpHeaders.SET_COOKIE))
+                        .anyMatch(cookie -> cookie.contains("refresh_token=")))
+                .andExpect(result -> assertThat(result.getResponse().getHeaders(HttpHeaders.SET_COOKIE))
+                        .allMatch(cookie -> cookie.contains("Max-Age=0")));
+    }
 }

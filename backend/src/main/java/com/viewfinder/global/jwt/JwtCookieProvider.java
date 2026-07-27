@@ -41,6 +41,16 @@ public class JwtCookieProvider {
         );
     }
 
+    // 브라우저의 Access Token Cookie를 즉시 만료시키는 빈 Cookie 생성
+    public ResponseCookie expireAccessTokenCookie() {
+        return createCookie(ACCESS_TOKEN_COOKIE_NAME, "", java.time.Duration.ZERO, "/");
+    }
+
+    // 브라우저의 Refresh Token Cookie를 즉시 만료시키는 빈 Cookie 생성
+    public ResponseCookie expireRefreshTokenCookie() {
+        return createCookie(REFRESH_TOKEN_COOKIE_NAME, "", java.time.Duration.ZERO, "/api/v1/auth");
+    }
+
     // HttpOnly·Secure·SameSite 보안 속성과 만료 시간을 적용한 Cookie 생성
     private ResponseCookie createCookie(String name, String value, java.time.Duration maxAge, String path) {
         return ResponseCookie.from(name, value)

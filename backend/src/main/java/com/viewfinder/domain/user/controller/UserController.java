@@ -57,4 +57,13 @@ public class UserController {
                         .toString())
                 .body(ApiResponse.success(loginResult.loginResponse()));
     }
+
+    // Access·Refresh Cookie를 만료시켜 현재 브라우저의 로그인 상태 종료
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout() {
+        return ResponseEntity.noContent()
+                .header(HttpHeaders.SET_COOKIE, jwtCookieProvider.expireAccessTokenCookie().toString())
+                .header(HttpHeaders.SET_COOKIE, jwtCookieProvider.expireRefreshTokenCookie().toString())
+                .build();
+    }
 }

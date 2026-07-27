@@ -44,4 +44,17 @@ class JwtCookieProviderTest {
         assertThat(cookie.getMaxAge()).isEqualTo(Duration.ofDays(14));
         assertThat(cookie.isHttpOnly()).isTrue();
     }
+
+    @Test
+    void expiresBothTokenCookies() {
+        ResponseCookie accessCookie = jwtCookieProvider.expireAccessTokenCookie();
+        ResponseCookie refreshCookie = jwtCookieProvider.expireRefreshTokenCookie();
+
+        assertThat(accessCookie.getValue()).isEmpty();
+        assertThat(accessCookie.getMaxAge()).isZero();
+        assertThat(accessCookie.getPath()).isEqualTo("/");
+        assertThat(refreshCookie.getValue()).isEmpty();
+        assertThat(refreshCookie.getMaxAge()).isZero();
+        assertThat(refreshCookie.getPath()).isEqualTo("/api/v1/auth");
+    }
 }
