@@ -2,13 +2,20 @@ package com.viewfinder.global.config;
 
 import com.viewfinder.domain.user.controller.UserController;
 import com.viewfinder.domain.user.dto.SignUpResponse;
+import com.viewfinder.domain.user.enums.Role;
 import com.viewfinder.domain.user.service.UserService;
+import com.viewfinder.global.jwt.JwtAuthenticationFilter;
 import com.viewfinder.global.jwt.JwtCookieProvider;
+import com.viewfinder.global.jwt.JwtTokenProvider;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -19,12 +26,21 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 // 인증 경로 허용과 보호 경로 차단을 확인하는 MVC Security 테스트 지정
-@WebMvcTest(UserController.class)
-@Import(SecurityConfig.class)
+@WebMvcTest(controllers = {UserController.class, SecurityConfigTest.ProtectedTestController.class})
+@Import({
+        SecurityConfig.class,
+        JwtConfig.class,
+        JwtTokenProvider.class,
+        JwtAuthenticationFilter.class,
+        SecurityConfigTest.ProtectedTestController.class
+})
 class SecurityConfigTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider;
 
     // 회원가입 Controller가 호출할 Service Bean을 테스트 대역으로 교체
     @MockitoBean
@@ -55,5 +71,35 @@ class SecurityConfigTest {
     void rejectsProtectedEndpointWithoutAuthentication() throws Exception {
         mockMvc.perform(get("/api/v1/protected"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void authenticatesProtectedEndpointWithAccessTokenCookie() throws Exception {
+        String accessToken = jwtTokenProvider.createAccessToken(1L, Role.USER);
+
+        mockMvc.perform(get("/api/v1/protected")
+                        .cookie(new Cookie(JwtCookieProvider.ACCESS_TOKEN_COOKIE_NAME, accessToken)))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content()
+                        .string("1"));
+    }
+
+    @Test
+    void rejectsRefreshTokenUsedAsAccessToken() throws Exception {
+        String refreshToken = jwtTokenProvider.createRefreshToken(1L);
+
+        mockMvc.perform(get("/api/v1/protected")
+                        .cookie(new Cookie(JwtCookieProvider.ACCESS_TOKEN_COOKIE_NAME, refreshToken)))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // JWT 필터가 등록한 현재 사용자 ID를 확인하는 테스트 전용 보호 API 정의
+    @RestController
+    static class ProtectedTestController {
+
+        @GetMapping("/api/v1/protected")
+        String protectedEndpoint(Authentication authentication) {
+            return authentication.getName();
+        }
     }
 }

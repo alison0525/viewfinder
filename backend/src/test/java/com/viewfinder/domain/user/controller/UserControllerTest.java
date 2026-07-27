@@ -5,6 +5,7 @@ import com.viewfinder.domain.user.dto.LoginResponse;
 import com.viewfinder.domain.user.dto.LoginResult;
 import com.viewfinder.domain.user.service.UserService;
 import com.viewfinder.global.jwt.JwtCookieProvider;
+import com.viewfinder.global.jwt.JwtAuthenticationFilter;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -39,6 +40,10 @@ class UserControllerTest {
     // Controller가 발급할 HttpOnly Cookie 생성 Bean을 테스트 대역으로 교체
     @MockitoBean
     private JwtCookieProvider jwtCookieProvider;
+
+    // SecurityConfig 생성에 필요한 JWT 필터를 MVC Controller 테스트 대역으로 교체
+    @MockitoBean
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Test
     void signsUpUserAndReturnsCreatedResponse() throws Exception {

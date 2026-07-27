@@ -9,6 +9,8 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import com.viewfinder.global.jwt.JwtAuthenticationFilter;
 
 // HTTP 요청의 인증·인가 규칙을 정의하는 Spring Security 설정 지정
 @Configuration
@@ -17,7 +19,10 @@ public class SecurityConfig {
 
     // API 요청에 적용할 Security Filter Chain 생성
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            JwtAuthenticationFilter jwtAuthenticationFilter
+    ) throws Exception {
         return http
                 // 세션 기반 웹 폼이 아닌 REST API이므로 CSRF 검증 비활성화
                 .csrf(AbstractHttpConfigurer::disable)
@@ -34,6 +39,8 @@ public class SecurityConfig {
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
                 )
+                // 기본 사용자명·비밀번호 인증 필터보다 먼저 JWT Cookie 인증 처리
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
 }
