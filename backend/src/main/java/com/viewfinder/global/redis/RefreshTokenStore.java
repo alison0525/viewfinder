@@ -2,22 +2,20 @@ package com.viewfinder.global.redis;
 
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
+import lombok.RequiredArgsConstructor;
 
 import java.time.Duration;
 import java.util.Optional;
 
 // Redis에서 사용자별 Refresh Token을 저장·조회·삭제하는 컴포넌트 지정
 @Component
+// final Redis 의존성을 받는 생성자를 Lombok이 자동 생성
+@RequiredArgsConstructor
 public class RefreshTokenStore {
 
     private static final String KEY_PREFIX = "auth:refresh:";
 
     private final StringRedisTemplate stringRedisTemplate;
-
-    // 문자열 Key·Value Redis 접근 도구 주입
-    public RefreshTokenStore(StringRedisTemplate stringRedisTemplate) {
-        this.stringRedisTemplate = stringRedisTemplate;
-    }
 
     // 사용자별 Refresh Token을 만료 시간과 함께 Redis에 저장
     public void save(Long userId, String refreshToken, Duration expiration) {
