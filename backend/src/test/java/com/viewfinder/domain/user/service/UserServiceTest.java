@@ -6,6 +6,7 @@ import com.viewfinder.domain.user.dto.SignUpResponse;
 import com.viewfinder.domain.user.dto.LoginRequest;
 import com.viewfinder.domain.user.dto.LoginResult;
 import com.viewfinder.domain.user.dto.LoginResponse;
+import com.viewfinder.domain.user.dto.TokenReissueResult;
 import com.viewfinder.domain.user.entity.User;
 import com.viewfinder.domain.user.exception.UserErrorCode;
 import com.viewfinder.domain.user.repository.UserRepository;
@@ -138,6 +139,32 @@ class UserServiceTest {
         userService.logout(previousRefreshToken);
 
         verify(refreshTokenStore, org.mockito.Mockito.never()).deleteByUserId(1L);
+    }
+
+    @Test
+    void reissuesTokensWhenRefreshTokenMatchesRedisValue() {
+        User user = userRepository.saveAndFlush(
+                User.createLocal("user@example.com", passwordEncoder.encode("password1234"), "viewfinder")
+        );
+        String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
+        given(refreshTokenStore.findByUserId(user.getId())).willReturn(java.util.Optional.of(refreshToken));
+
+        TokenReissueResult result = userService.reissueTokens(refreshToken);
+
+        assertThat(result.accessToken()).isNotBlank();
+        assertThat(result.refreshToken()).isNotEqualTo(refreshToken);
+        verify(refreshTokenStore).save(user.getId(), result.refreshToken(), Duration.ofDays(14));
+    }
+
+    @Test
+    void rejectsTokenReissueWhenRefreshTokenDoesNotMatchRedisValue() {
+        String refreshToken = jwtTokenProvider.createRefreshToken(1L);
+        given(refreshTokenStore.findByUserId(1L)).willReturn(java.util.Optional.of("current-refresh-token"));
+
+        assertThatThrownBy(() -> userService.reissueTokens(refreshToken))
+                .isInstanceOf(BusinessException.class)
+                .extracting(exception -> ((BusinessException) exception).getErrorCode())
+                .isEqualTo(UserErrorCode.TOKEN_REISSUE_FAILED);
     }
 
     @Test

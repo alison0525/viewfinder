@@ -5,6 +5,7 @@ import com.viewfinder.domain.user.dto.SignUpResponse;
 import com.viewfinder.domain.user.dto.LoginRequest;
 import com.viewfinder.domain.user.dto.LoginResult;
 import com.viewfinder.domain.user.dto.LoginResponse;
+import com.viewfinder.domain.user.dto.TokenReissueResult;
 import com.viewfinder.domain.user.entity.User;
 import com.viewfinder.domain.user.enums.Provider;
 import com.viewfinder.domain.user.exception.UserErrorCode;
@@ -89,6 +90,36 @@ public class UserService {
                     .ifPresent(savedRefreshToken -> refreshTokenStore.deleteByUserId(userId));
         } catch (IllegalArgumentException exception) {
             // 형식이 불완전한 Token도 로그아웃 요청 자체는 성공 처리
+        }
+    }
+
+    // 현재 Redis Refresh Token을 검증하고 새 Access·Refresh Token을 발급하는 재발급 처리
+    public TokenReissueResult reissueTokens(String refreshToken) {
+        if (refreshToken == null || !jwtTokenProvider.isValidToken(refreshToken)) {
+            throw new BusinessException(UserErrorCode.TOKEN_REISSUE_FAILED);
+        }
+
+        try {
+            if (jwtTokenProvider.getTokenType(refreshToken) != TokenType.REFRESH) {
+                throw new BusinessException(UserErrorCode.TOKEN_REISSUE_FAILED);
+            }
+
+            Long userId = jwtTokenProvider.getUserId(refreshToken);
+            refreshTokenStore.findByUserId(userId)
+                    // Redis에 없는 만료·로그아웃 Token과 이전 로그인 Token의 재발급 차단
+                    .filter(refreshToken::equals)
+                    .orElseThrow(() -> new BusinessException(UserErrorCode.TOKEN_REISSUE_FAILED));
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new BusinessException(UserErrorCode.TOKEN_REISSUE_FAILED));
+
+            String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getRole());
+            String newRefreshToken = jwtTokenProvider.createRefreshToken(user.getId());
+            // 기존 Token을 새 Token으로 교체하고 14일 TTL을 새로 시작
+            refreshTokenStore.save(user.getId(), newRefreshToken, jwtProperties.refreshTokenExpiration());
+
+            return new TokenReissueResult(accessToken, newRefreshToken);
+        } catch (IllegalArgumentException exception) {
+            throw new BusinessException(UserErrorCode.TOKEN_REISSUE_FAILED);
         }
     }
 

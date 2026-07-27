@@ -12,6 +12,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Date;
+import java.util.UUID;
 
 // JWT 생성·서명 검증·User ID 추출을 담당하는 공통 컴포넌트 지정
 @Component
@@ -75,6 +76,8 @@ public class JwtTokenProvider {
 
         var tokenBuilder = Jwts.builder()
                 .subject(userId.toString())
+                // 같은 초에 재발급해도 새 Token 문자열이 되도록 고유 식별자 추가
+                .id(UUID.randomUUID().toString())
                 .issuedAt(now)
                 .expiration(expiresAt)
                 .claim(TOKEN_TYPE_CLAIM, tokenType.name());

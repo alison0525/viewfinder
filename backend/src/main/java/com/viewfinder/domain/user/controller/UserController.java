@@ -5,6 +5,7 @@ import com.viewfinder.domain.user.dto.SignUpResponse;
 import com.viewfinder.domain.user.dto.LoginRequest;
 import com.viewfinder.domain.user.dto.LoginResult;
 import com.viewfinder.domain.user.dto.LoginResponse;
+import com.viewfinder.domain.user.dto.TokenReissueResult;
 import com.viewfinder.domain.user.service.UserService;
 import com.viewfinder.global.jwt.JwtCookieProvider;
 import com.viewfinder.global.response.ApiResponse;
@@ -69,6 +70,23 @@ public class UserController {
         return ResponseEntity.noContent()
                 .header(HttpHeaders.SET_COOKIE, jwtCookieProvider.expireAccessTokenCookie().toString())
                 .header(HttpHeaders.SET_COOKIE, jwtCookieProvider.expireRefreshTokenCookie().toString())
+                .build();
+    }
+
+    // Refresh Cookie 검증 뒤 새 Access·Refresh Cookie를 발급하는 Token 재발급 API 제공
+    @PostMapping("/refresh")
+    public ResponseEntity<Void> refresh(
+            @CookieValue(value = JwtCookieProvider.REFRESH_TOKEN_COOKIE_NAME, required = false) String refreshToken
+    ) {
+        TokenReissueResult reissueResult = userService.reissueTokens(refreshToken);
+
+        return ResponseEntity.noContent()
+                .header(HttpHeaders.SET_COOKIE, jwtCookieProvider
+                        .createAccessTokenCookie(reissueResult.accessToken())
+                        .toString())
+                .header(HttpHeaders.SET_COOKIE, jwtCookieProvider
+                        .createRefreshTokenCookie(reissueResult.refreshToken())
+                        .toString())
                 .build();
     }
 }

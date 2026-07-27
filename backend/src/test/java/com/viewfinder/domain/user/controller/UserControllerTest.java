@@ -3,6 +3,7 @@ package com.viewfinder.domain.user.controller;
 import com.viewfinder.domain.user.dto.SignUpResponse;
 import com.viewfinder.domain.user.dto.LoginResponse;
 import com.viewfinder.domain.user.dto.LoginResult;
+import com.viewfinder.domain.user.dto.TokenReissueResult;
 import com.viewfinder.domain.user.service.UserService;
 import com.viewfinder.global.jwt.JwtCookieProvider;
 import com.viewfinder.global.jwt.JwtAuthenticationFilter;
@@ -148,5 +149,25 @@ class UserControllerTest {
                         .allMatch(cookie -> cookie.contains("Max-Age=0")));
 
         verify(userService).logout("refresh-token");
+    }
+
+    @Test
+    void reissuesTokenCookiesWithRefreshTokenCookie() throws Exception {
+        given(userService.reissueTokens("previous-refresh-token"))
+                .willReturn(new TokenReissueResult("new-access-token", "new-refresh-token"));
+        given(jwtCookieProvider.createAccessTokenCookie("new-access-token"))
+                .willReturn(ResponseCookie.from("access_token", "new-access-token").httpOnly(true).build());
+        given(jwtCookieProvider.createRefreshTokenCookie("new-refresh-token"))
+                .willReturn(ResponseCookie.from("refresh_token", "new-refresh-token").httpOnly(true).build());
+
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .cookie(new Cookie("refresh_token", "previous-refresh-token")))
+                .andExpect(status().isNoContent())
+                .andExpect(header().string(HttpHeaders.SET_COOKIE,
+                        org.hamcrest.Matchers.containsString("access_token=new-access-token")))
+                .andExpect(result -> assertThat(result.getResponse().getHeaders(HttpHeaders.SET_COOKIE))
+                        .anyMatch(cookie -> cookie.contains("refresh_token=new-refresh-token")));
+
+        verify(userService).reissueTokens("previous-refresh-token");
     }
 }
