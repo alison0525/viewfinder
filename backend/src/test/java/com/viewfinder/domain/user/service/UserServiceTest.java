@@ -14,15 +14,20 @@ import com.viewfinder.global.config.JwtConfig;
 import com.viewfinder.global.config.PasswordEncoderConfig;
 import com.viewfinder.global.exception.BusinessException;
 import com.viewfinder.global.jwt.JwtTokenProvider;
+import com.viewfinder.global.redis.RefreshTokenStore;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verify;
 
 // 실제 PostgreSQL에서 회원가입 Service 규칙을 확인하는 JPA 통합 테스트 지정
 @DataJpaTest
@@ -47,6 +52,10 @@ class UserServiceTest {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    // 로그인 성공 시 Redis 저장 호출을 검증할 Refresh Token 저장소 테스트 대역 등록
+    @MockitoBean
+    private RefreshTokenStore refreshTokenStore;
 
     @Test
     void signsUpLocalUserWithEncodedPassword() {
@@ -99,6 +108,12 @@ class UserServiceTest {
         assertThat(result.loginResponse().nickname()).isEqualTo("viewfinder");
         assertThat(result.accessToken()).isNotBlank();
         assertThat(result.refreshToken()).isNotBlank();
+        // UserService가 발급한 동일 Refresh Token과 설정된 TTL을 Redis 저장소에 전달 확인
+        verify(refreshTokenStore).save(
+                result.loginResponse().id(),
+                result.refreshToken(),
+                Duration.ofDays(14)
+        );
     }
 
     @Test

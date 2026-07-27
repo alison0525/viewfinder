@@ -10,7 +10,9 @@ import com.viewfinder.domain.user.enums.Provider;
 import com.viewfinder.domain.user.exception.UserErrorCode;
 import com.viewfinder.domain.user.repository.UserRepository;
 import com.viewfinder.global.exception.BusinessException;
+import com.viewfinder.global.config.JwtProperties;
 import com.viewfinder.global.jwt.JwtTokenProvider;
+import com.viewfinder.global.redis.RefreshTokenStore;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -26,6 +28,8 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final RefreshTokenStore refreshTokenStore;
+    private final JwtProperties jwtProperties;
 
     // 로컬 회원가입의 중복 검증·비밀번호 암호화·User 저장 처리
     @Transactional
@@ -59,6 +63,9 @@ public class UserService {
         LoginResponse loginResponse = new LoginResponse(user.getId(), user.getEmail(), user.getNickname());
         String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getRole());
         String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
+
+        // 새 로그인으로 발급한 Refresh Token을 사용자별 Redis Key와 14일 TTL로 저장
+        refreshTokenStore.save(user.getId(), refreshToken, jwtProperties.refreshTokenExpiration());
 
         return new LoginResult(loginResponse, accessToken, refreshToken);
     }
