@@ -11,6 +11,7 @@ import com.viewfinder.domain.user.exception.UserErrorCode;
 import com.viewfinder.domain.user.repository.UserRepository;
 import com.viewfinder.global.exception.BusinessException;
 import com.viewfinder.global.config.JwtProperties;
+import com.viewfinder.global.jwt.TokenType;
 import com.viewfinder.global.jwt.JwtTokenProvider;
 import com.viewfinder.global.redis.RefreshTokenStore;
 import lombok.RequiredArgsConstructor;
@@ -68,6 +69,27 @@ public class UserService {
         refreshTokenStore.save(user.getId(), refreshToken, jwtProperties.refreshTokenExpiration());
 
         return new LoginResult(loginResponse, accessToken, refreshToken);
+    }
+
+    // 현재 Refresh Token과 Redis 저장값이 일치할 때만 서버 측 로그인 상태 삭제
+    public void logout(String refreshToken) {
+        if (refreshToken == null || !jwtTokenProvider.isValidToken(refreshToken)) {
+            return;
+        }
+
+        try {
+            if (jwtTokenProvider.getTokenType(refreshToken) != TokenType.REFRESH) {
+                return;
+            }
+
+            Long userId = jwtTokenProvider.getUserId(refreshToken);
+            refreshTokenStore.findByUserId(userId)
+                    // 이전 기기의 토큰이 최신 로그인 토큰을 삭제하지 않도록 현재 저장값 일치 확인
+                    .filter(savedRefreshToken -> savedRefreshToken.equals(refreshToken))
+                    .ifPresent(savedRefreshToken -> refreshTokenStore.deleteByUserId(userId));
+        } catch (IllegalArgumentException exception) {
+            // 형식이 불완전한 Token도 로그아웃 요청 자체는 성공 처리
+        }
     }
 
     // 이메일·닉네임 유니크 제약 위반 전 사용자용 오류 반환

@@ -14,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -58,9 +59,13 @@ public class UserController {
                 .body(ApiResponse.success(loginResult.loginResponse()));
     }
 
-    // Access·Refresh Cookie를 만료시켜 현재 브라우저의 로그인 상태 종료
+    // Refresh Token Redis 저장값과 브라우저 Cookie를 함께 삭제해 현재 로그인 상태 종료
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout() {
+    public ResponseEntity<Void> logout(
+            @CookieValue(value = JwtCookieProvider.REFRESH_TOKEN_COOKIE_NAME, required = false) String refreshToken
+    ) {
+        userService.logout(refreshToken);
+
         return ResponseEntity.noContent()
                 .header(HttpHeaders.SET_COOKIE, jwtCookieProvider.expireAccessTokenCookie().toString())
                 .header(HttpHeaders.SET_COOKIE, jwtCookieProvider.expireRefreshTokenCookie().toString())

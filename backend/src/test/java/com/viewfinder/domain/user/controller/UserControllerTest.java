@@ -6,6 +6,7 @@ import com.viewfinder.domain.user.dto.LoginResult;
 import com.viewfinder.domain.user.service.UserService;
 import com.viewfinder.global.jwt.JwtCookieProvider;
 import com.viewfinder.global.jwt.JwtAuthenticationFilter;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -18,6 +19,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -135,7 +137,8 @@ class UserControllerTest {
         given(jwtCookieProvider.expireRefreshTokenCookie())
                 .willReturn(ResponseCookie.from("refresh_token", "").maxAge(0).path("/api/v1/auth").build());
 
-        mockMvc.perform(post("/api/v1/auth/logout"))
+        mockMvc.perform(post("/api/v1/auth/logout")
+                        .cookie(new Cookie("refresh_token", "refresh-token")))
                 .andExpect(status().isNoContent())
                 .andExpect(header().string(HttpHeaders.SET_COOKIE,
                         org.hamcrest.Matchers.containsString("access_token=")))
@@ -143,5 +146,7 @@ class UserControllerTest {
                         .anyMatch(cookie -> cookie.contains("refresh_token=")))
                 .andExpect(result -> assertThat(result.getResponse().getHeaders(HttpHeaders.SET_COOKIE))
                         .allMatch(cookie -> cookie.contains("Max-Age=0")));
+
+        verify(userService).logout("refresh-token");
     }
 }

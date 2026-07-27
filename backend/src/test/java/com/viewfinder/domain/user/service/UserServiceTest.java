@@ -27,6 +27,7 @@ import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
 // 실제 PostgreSQL에서 회원가입 Service 규칙을 확인하는 JPA 통합 테스트 지정
@@ -52,6 +53,9 @@ class UserServiceTest {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider;
 
     // 로그인 성공 시 Redis 저장 호출을 검증할 Refresh Token 저장소 테스트 대역 등록
     @MockitoBean
@@ -114,6 +118,26 @@ class UserServiceTest {
                 result.refreshToken(),
                 Duration.ofDays(14)
         );
+    }
+
+    @Test
+    void deletesStoredRefreshTokenOnLogout() {
+        String refreshToken = jwtTokenProvider.createRefreshToken(1L);
+        given(refreshTokenStore.findByUserId(1L)).willReturn(java.util.Optional.of(refreshToken));
+
+        userService.logout(refreshToken);
+
+        verify(refreshTokenStore).deleteByUserId(1L);
+    }
+
+    @Test
+    void keepsCurrentRefreshTokenWhenLogoutTokenIsFromPreviousLogin() {
+        String previousRefreshToken = jwtTokenProvider.createRefreshToken(1L);
+        given(refreshTokenStore.findByUserId(1L)).willReturn(java.util.Optional.of("current-refresh-token"));
+
+        userService.logout(previousRefreshToken);
+
+        verify(refreshTokenStore, org.mockito.Mockito.never()).deleteByUserId(1L);
     }
 
     @Test
