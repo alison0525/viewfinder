@@ -28,6 +28,6 @@ jobs:
         with:
           distribution: temurin
           java-version: "25"
-      - name: Run tests
-        # Testcontainers의 PostGIS 기동 → 테스트 실행 순서 수행
-        run: ./gradlew test
+      - name: Run quality checks and tests
+        # Checkstyle 정적 검사 후 Testcontainers PostGIS 기반 테스트 실행
+        run: ./gradlew check

@@ -1,5 +1,7 @@
 plugins {
     id 'java'
+    // Java 코드의 기본 품질 규칙을 검사하는 Gradle 내장 플러그인 적용
+    id 'checkstyle'
     id 'org.springframework.boot' version '4.1.0'
     id 'io.spring.dependency-management' version '1.1.7'
 }
