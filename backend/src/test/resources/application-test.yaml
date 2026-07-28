@@ -7,4 +7,4 @@ jwt:
 
 cors:
   # CORS MVC 테스트에서 사용할 로컬 프런트 Origin 지정
-  allowed-origins: http://localhost:5173
+  allowed-origins: http://localhost:3000
