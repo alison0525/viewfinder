@@ -63,4 +63,9 @@ public class User extends BaseEntity {
         return new User(provider, providerId, email, password, nickname);
     }
 
+    // 로컬 회원가입 규칙인 LOCAL 제공자와 이메일 providerId를 적용한 User 생성
+    public static User createLocal(String email, String encodedPassword, String nickname) {
+        return new User(Provider.LOCAL, email, email, encodedPassword, nickname);
+    }
+
 }

@@ -13,4 +13,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     // 메서드 이름을 해석해 email 조건의 SELECT 쿼리를 자동 생성
     Optional<User> findByEmail(String email);
+
+    // 메서드 이름을 해석해 email 중복 여부를 확인하는 EXISTS 쿼리를 자동 생성
+    boolean existsByEmail(String email);
+
+    // 메서드 이름을 해석해 nickname 중복 여부를 확인하는 EXISTS 쿼리를 자동 생성
+    boolean existsByNickname(String nickname);
 }

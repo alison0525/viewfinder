@@ -1,0 +1,10 @@
+jwt:
+  # 테스트 전용 HMAC 비밀키 지정
+  secret: test-jwt-secret-must-be-longer-than-thirty-two-bytes
+  cookie:
+    # MockMvc HTTP 테스트에서 Cookie 전달 허용
+    secure: false
+
+cors:
+  # CORS MVC 테스트에서 사용할 로컬 프런트 Origin 지정
+  allowed-origins: http://localhost:3000

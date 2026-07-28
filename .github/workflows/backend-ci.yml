@@ -1,7 +1,14 @@
 name: Backend CI
 
 on:
+  # 기능 브랜치의 검증과 PR 품질 피드백 실행
   pull_request:
+    branches: [dev]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+  # PR 병합으로 dev가 갱신될 때 Gradle 캐시 저장
+  push:
     branches: [dev]
     paths:
       - "backend/**"
@@ -9,6 +16,8 @@ on:
 
 permissions:
   contents: read
+  # JaCoCo 요약·Checkstyle 인라인 리뷰를 PR에 작성할 권한
+  pull-requests: write
 
 concurrency:
   group: backend-ci-${{ github.event.pull_request.number || github.ref }}
@@ -16,18 +25,69 @@ concurrency:
 
 jobs:
   test:
-    # GitHub 제공 Ubuntu 실행 환경. Docker가 기본 제공되어 Testcontainers 실행 가능
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: backend
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v5
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "25"
-      - name: Run tests
-        # Testcontainers의 PostGIS 기동 → 테스트 실행 순서 수행
+
+      - name: Set up Gradle cache
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          # 공개·비공개 저장소에서 모두 사용 가능한 GitHub Actions 기본 캐시
+          cache-provider: basic
+          # PR은 저장된 dev 캐시만 복원하고, dev 병합 후 push 실행만 새 캐시 저장
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
+
+      - name: Run tests and generate JaCoCo report
+        # test.finalizedBy(jacocoTestReport) 설정으로 XML·HTML 리포트 함께 생성
         run: ./gradlew test
+
+      - name: Review Checkstyle violations on pull request
+        # PR에서 변경된 코드 줄에만 Checkstyle 경고를 인라인 리뷰로 표시
+        if: github.event_name == 'pull_request'
+        uses: dbelyaev/action-checkstyle@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          reporter: github-pr-review
+          level: warning
+          checkstyle_config: backend/config/checkstyle/checkstyle.xml
+          workdir: backend
+
+      - name: Publish JaCoCo coverage on pull request
+        # 전체·변경 파일 커버리지를 하나의 PR 댓글로 생성하고 이후 실행에서 갱신
+        if: github.event_name == 'pull_request'
+        uses: madrapps/jacoco-report@v1.8.0
+        with:
+          paths: backend/build/reports/jacoco/test/jacocoTestReport.xml
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # 초기 단계에서는 수치를 표시만 하고 커버리지 부족으로 CI를 실패시키지 않음
+          min-coverage-overall: 0
+          min-coverage-changed-files: 0
+          title: 테스트 커버리지 리포트
+          update-comment: true
+
+      - name: Run Checkstyle after merge to dev
+        # dev에도 동일한 규칙을 적용하되 PR 인라인 리뷰 대신 Gradle 검사 결과로 검증
+        if: github.event_name == 'push'
+        run: ./gradlew checkstyleMain checkstyleTest
+
+      - name: Upload test and coverage reports
+        # 실패 시에도 테스트·JaCoCo HTML/XML 리포트 확인 가능
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-quality-reports
+          path: |
+            backend/build/reports/tests
+            backend/build/reports/jacoco
+          if-no-files-found: warn

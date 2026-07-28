@@ -3,3 +3,12 @@ spring:
     name: backend
   profiles:
     default: dev
+
+jwt:
+  # 짧게 노출되어도 피해를 제한할 Access Token 만료 시간 지정
+  access-token-expiration: 30m
+  # Access Token 재발급에만 사용할 Refresh Token 만료 시간 지정
+  refresh-token-expiration: 14d
+  cookie:
+    # 동일 사이트 요청만 허용해 Cookie 기반 인증의 CSRF 위험을 완화
+    same-site: Lax
