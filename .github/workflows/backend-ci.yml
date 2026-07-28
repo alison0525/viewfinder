@@ -30,6 +30,12 @@ jobs:
         with:
           distribution: temurin
           java-version: "25"
+      - name: Setup Gradle cache
+        # 의존성·Gradle Wrapper·로컬 빌드 캐시를 GitHub Actions 캐시에서 복원·저장
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          # 공개·비공개 저장소에서 모두 동작하는 GitHub Actions 기본 캐시 사용
+          cache-provider: basic
       - name: Run quality checks and tests
         # Checkstyle 정적 검사 후 Testcontainers PostGIS 기반 테스트·JaCoCo 리포트 생성
         run: ./gradlew check
