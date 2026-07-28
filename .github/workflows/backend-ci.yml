@@ -1,7 +1,14 @@
 name: Backend CI
 
 on:
+  # 기능 브랜치의 검증과 PR 품질 피드백 실행
   pull_request:
+    branches: [dev]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+  # PR 병합으로 dev가 갱신될 때 Gradle 캐시 저장
+  push:
     branches: [dev]
     paths:
       - "backend/**"
@@ -9,10 +16,8 @@ on:
 
 permissions:
   contents: read
-  # JaCoCo 결과를 PR 대화의 고정 갱신 댓글로 남길 권한
+  # JaCoCo 요약·Checkstyle 인라인 리뷰를 PR에 작성할 권한
   pull-requests: write
-  # Checkstyle SARIF 결과를 GitHub Code Scanning 경고로 업로드할 권한
-  security-events: write
 
 concurrency:
   group: backend-ci-${{ github.event.pull_request.number || github.ref }}
@@ -20,116 +25,64 @@ concurrency:
 
 jobs:
   test:
-    # GitHub 제공 Ubuntu 실행 환경. Docker가 기본 제공되어 Testcontainers 실행 가능
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: backend
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v5
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "25"
-      - name: Setup Gradle cache
-        # 의존성·Gradle Wrapper·로컬 빌드 캐시를 GitHub Actions 캐시에서 복원·저장
+
+      - name: Set up Gradle cache
         uses: gradle/actions/setup-gradle@v6
         with:
-          # 공개·비공개 저장소에서 모두 동작하는 GitHub Actions 기본 캐시 사용
+          # 공개·비공개 저장소에서 모두 사용 가능한 GitHub Actions 기본 캐시
           cache-provider: basic
-      - name: Run quality checks and tests
-        # Checkstyle 정적 검사 후 Testcontainers PostGIS 기반 테스트·JaCoCo 리포트 생성
-        run: ./gradlew check
-      - name: Publish JaCoCo coverage summary
-        id: coverage
-        # Actions Summary와 PR 댓글에서 재사용할 현재 라인 커버리지 계산
-        if: always()
-        run: |
-          REPORT="build/reports/jacoco/test/jacocoTestReport.xml"
-          if [ ! -f "$REPORT" ]; then
-            echo "## JaCoCo Coverage" >> "$GITHUB_STEP_SUMMARY"
-            echo "커버리지 리포트를 생성하지 못했습니다." >> "$GITHUB_STEP_SUMMARY"
-            echo "available=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
+          # PR은 저장된 dev 캐시만 복원하고, dev 병합 후 push 실행만 새 캐시 저장
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
 
-          COUNTER=$(grep -o '<counter type="LINE" missed="[0-9]*" covered="[0-9]*"/>' "$REPORT" | tail -n 1)
-          MISSED=$(echo "$COUNTER" | sed -E 's/.*missed="([0-9]+)".*/\1/')
-          COVERED=$(echo "$COUNTER" | sed -E 's/.*covered="([0-9]+)".*/\1/')
-          TOTAL=$((MISSED + COVERED))
-          PERCENT=$(awk "BEGIN { printf \"%.1f\", $COVERED * 100 / $TOTAL }")
+      - name: Run tests and generate JaCoCo report
+        # test.finalizedBy(jacocoTestReport) 설정으로 XML·HTML 리포트 함께 생성
+        run: ./gradlew test
 
-          {
-            echo "available=true"
-            echo "percent=$PERCENT"
-            echo "covered=$COVERED"
-            echo "total=$TOTAL"
-          } >> "$GITHUB_OUTPUT"
-
-          {
-            echo "## JaCoCo Coverage"
-            echo "| 기준 | 결과 |"
-            echo "| --- | --- |"
-            echo "| 라인 커버리지 | ${PERCENT}% (${COVERED}/${TOTAL}) |"
-          } >> "$GITHUB_STEP_SUMMARY"
-      - name: Publish JaCoCo coverage comment
-        # 재실행해도 기존 봇 댓글 하나만 갱신하여 PR 대화가 중복 댓글로 쌓이지 않게 처리
-        if: always()
-        uses: actions/github-script@v7
-        env:
-          COVERAGE_AVAILABLE: ${{ steps.coverage.outputs.available }}
-          COVERAGE_PERCENT: ${{ steps.coverage.outputs.percent }}
-          COVERAGE_COVERED: ${{ steps.coverage.outputs.covered }}
-          COVERAGE_TOTAL: ${{ steps.coverage.outputs.total }}
+      - name: Review Checkstyle violations on pull request
+        # PR에서 변경된 코드 줄에만 Checkstyle 경고를 인라인 리뷰로 표시
+        if: github.event_name == 'pull_request'
+        uses: dbelyaev/action-checkstyle@v3
         with:
-          script: |
-            const marker = '<!-- viewfinder-jacoco-coverage -->';
-            const coverageAvailable = process.env.COVERAGE_AVAILABLE === 'true';
-            const body = coverageAvailable
-              ? `${marker}\n## 📊 JaCoCo Coverage\n\n| 기준 | 결과 |\n| --- | --- |\n| 라인 커버리지 | **${process.env.COVERAGE_PERCENT}%** (${process.env.COVERAGE_COVERED}/${process.env.COVERAGE_TOTAL}) |\n\n_이 댓글은 Backend CI가 실행될 때마다 갱신됩니다._`
-              : `${marker}\n## 📊 JaCoCo Coverage\n\n커버리지 리포트를 생성하지 못했습니다. Actions 로그를 확인해 주세요.`;
-            const comments = await github.paginate(github.rest.issues.listComments, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
-            const existingComment = comments.find((comment) =>
-              comment.user.type === 'Bot' && comment.body.includes(marker)
-            );
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          reporter: github-pr-review
+          level: warning
+          checkstyle_config: backend/config/checkstyle/checkstyle.xml
+          workdir: backend
 
-            if (existingComment) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: existingComment.id,
-                body,
-              });
-              return;
-            }
+      - name: Publish JaCoCo coverage on pull request
+        # 전체·변경 파일 커버리지를 하나의 PR 댓글로 생성하고 이후 실행에서 갱신
+        if: github.event_name == 'pull_request'
+        uses: madrapps/jacoco-report@v1.8.0
+        with:
+          paths: backend/build/reports/jacoco/test/jacocoTestReport.xml
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # 초기 단계에서는 수치를 표시만 하고 커버리지 부족으로 CI를 실패시키지 않음
+          min-coverage-overall: 0
+          min-coverage-changed-files: 0
+          title: 테스트 커버리지 리포트
+          update-comment: true
 
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body,
-            });
-      - name: Upload Checkstyle main source alerts
-        # 운영 코드의 린트 위반을 PR 파일·줄 위치에 Code Scanning 경고로 표시
-        if: always()
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: backend/build/reports/checkstyle/main.sarif
-          category: backend-checkstyle-main
-      - name: Upload Checkstyle test source alerts
-        # 테스트 코드의 린트 위반을 운영 코드와 별도 범주로 표시
-        if: always()
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: backend/build/reports/checkstyle/test.sarif
-          category: backend-checkstyle-test
+      - name: Run Checkstyle after merge to dev
+        # dev에도 동일한 규칙을 적용하되 PR 인라인 리뷰 대신 Gradle 검사 결과로 검증
+        if: github.event_name == 'push'
+        run: ./gradlew checkstyleMain checkstyleTest
+
       - name: Upload test and coverage reports
-        # 실패한 PR도 원인 확인이 가능하도록 테스트·커버리지 HTML/XML 리포트 보관
+        # 실패 시에도 테스트·JaCoCo HTML/XML 리포트 확인 가능
         if: always()
         uses: actions/upload-artifact@v4
         with:
