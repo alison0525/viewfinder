@@ -9,6 +9,8 @@ on:
 
 permissions:
   contents: read
+  # Checkstyle SARIF 결과를 GitHub Code Scanning 경고로 업로드할 권한
+  security-events: write
 
 concurrency:
   group: backend-ci-${{ github.event.pull_request.number || github.ref }}
@@ -31,6 +33,43 @@ jobs:
       - name: Run quality checks and tests
         # Checkstyle 정적 검사 후 Testcontainers PostGIS 기반 테스트·JaCoCo 리포트 생성
         run: ./gradlew check
+      - name: Publish JaCoCo coverage summary
+        # PR 검사 화면에서 현재 라인 커버리지 기준선을 빠르게 확인할 요약 생성
+        if: always()
+        run: |
+          REPORT="build/reports/jacoco/test/jacocoTestReport.xml"
+          if [ ! -f "$REPORT" ]; then
+            echo "## JaCoCo Coverage" >> "$GITHUB_STEP_SUMMARY"
+            echo "커버리지 리포트를 생성하지 못했습니다." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          COUNTER=$(grep -o '<counter type="LINE" missed="[0-9]*" covered="[0-9]*"/>' "$REPORT" | tail -n 1)
+          MISSED=$(echo "$COUNTER" | sed -E 's/.*missed="([0-9]+)".*/\1/')
+          COVERED=$(echo "$COUNTER" | sed -E 's/.*covered="([0-9]+)".*/\1/')
+          TOTAL=$((MISSED + COVERED))
+          PERCENT=$(awk "BEGIN { printf \"%.1f\", $COVERED * 100 / $TOTAL }")
+
+          {
+            echo "## JaCoCo Coverage"
+            echo "| 기준 | 결과 |"
+            echo "| --- | --- |"
+            echo "| 라인 커버리지 | ${PERCENT}% (${COVERED}/${TOTAL}) |"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload Checkstyle main source alerts
+        # 운영 코드의 린트 위반을 PR 파일·줄 위치에 Code Scanning 경고로 표시
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: backend/build/reports/checkstyle/main.sarif
+          category: backend-checkstyle-main
+      - name: Upload Checkstyle test source alerts
+        # 테스트 코드의 린트 위반을 운영 코드와 별도 범주로 표시
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: backend/build/reports/checkstyle/test.sarif
+          category: backend-checkstyle-test
       - name: Upload test and coverage reports
         # 실패한 PR도 원인 확인이 가능하도록 테스트·커버리지 HTML/XML 리포트 보관
         if: always()
