@@ -29,5 +29,15 @@ jobs:
           distribution: temurin
           java-version: "25"
       - name: Run quality checks and tests
-        # Checkstyle 정적 검사 후 Testcontainers PostGIS 기반 테스트 실행
+        # Checkstyle 정적 검사 후 Testcontainers PostGIS 기반 테스트·JaCoCo 리포트 생성
         run: ./gradlew check
+      - name: Upload test and coverage reports
+        # 실패한 PR도 원인 확인이 가능하도록 테스트·커버리지 HTML/XML 리포트 보관
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-quality-reports
+          path: |
+            backend/build/reports/tests
+            backend/build/reports/jacoco
+          if-no-files-found: warn
