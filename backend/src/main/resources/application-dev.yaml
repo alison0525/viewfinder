@@ -22,3 +22,7 @@ jwt:
   cookie:
     # localhost HTTP 개발 환경에서도 Cookie 전달 허용
     secure: false
+
+cors:
+  # Vite 기본 로컬 개발 주소를 허용하고 필요하면 backend/.env의 CORS_ALLOWED_ORIGINS로 교체
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}

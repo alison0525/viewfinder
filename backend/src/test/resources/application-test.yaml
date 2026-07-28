@@ -4,3 +4,7 @@ jwt:
   cookie:
     # MockMvc HTTP 테스트에서 Cookie 전달 허용
     secure: false
+
+cors:
+  # CORS MVC 테스트에서 사용할 로컬 프런트 Origin 지정
+  allowed-origins: http://localhost:5173
