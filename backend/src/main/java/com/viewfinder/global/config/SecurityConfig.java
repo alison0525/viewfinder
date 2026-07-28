@@ -14,10 +14,9 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import com.viewfinder.global.jwt.JwtAuthenticationFilter;
+import com.viewfinder.global.oauth2.OAuth2AuthorizationRequestCookieRepository;
 
 import java.util.List;
-
-import static org.springframework.security.config.Customizer.withDefaults;
 
 // HTTP 요청의 인증·인가 규칙을 정의하는 Spring Security 설정 지정
 @Configuration
@@ -30,6 +29,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             JwtAuthenticationFilter jwtAuthenticationFilter,
+            OAuth2AuthorizationRequestCookieRepository oauth2AuthorizationRequestCookieRepository,
             CorsConfigurationSource corsConfigurationSource
     ) throws Exception {
         return http
@@ -50,8 +50,12 @@ public class SecurityConfig {
                         .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
                         .anyRequest().authenticated()
                 )
-                // /oauth2/authorization/kakao 요청을 카카오 인가 화면으로 보내고 Callback 처리를 시작하도록 OAuth2 Login 활성화
-                .oauth2Login(withDefaults())
+                // /oauth2/authorization/kakao 요청의 state를 Cookie에 저장하고 카카오 인가 화면으로 이동
+                .oauth2Login(oauth2 -> oauth2
+                        .authorizationEndpoint(endpoint -> endpoint
+                                .authorizationRequestRepository(oauth2AuthorizationRequestCookieRepository)
+                        )
+                )
                 // 인증 정보 없는 보호 API 요청을 리다이렉트 대신 401 상태로 응답
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))

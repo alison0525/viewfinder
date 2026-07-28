@@ -7,6 +7,7 @@ import com.viewfinder.domain.user.service.UserService;
 import com.viewfinder.global.jwt.JwtAuthenticationFilter;
 import com.viewfinder.global.jwt.JwtCookieProvider;
 import com.viewfinder.global.jwt.JwtTokenProvider;
+import com.viewfinder.global.oauth2.OAuth2AuthorizationRequestCookieRepository;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
@@ -37,6 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         JwtConfig.class,
         JwtTokenProvider.class,
         JwtAuthenticationFilter.class,
+        OAuth2AuthorizationRequestCookieRepository.class,
         SecurityConfigTest.ProtectedTestController.class
 })
 class SecurityConfigTest {
@@ -103,7 +105,9 @@ class SecurityConfigTest {
                 )))
                 .andExpect(header().string("Location", containsString(
                         "response_type=code"
-                )));
+                )))
+                .andExpect(cookie().exists("oauth2_authorization_request"))
+                .andExpect(cookie().httpOnly("oauth2_authorization_request", true));
     }
 
     @Test
