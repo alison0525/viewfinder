@@ -17,6 +17,8 @@ import com.viewfinder.global.jwt.JwtAuthenticationFilter;
 
 import java.util.List;
 
+import static org.springframework.security.config.Customizer.withDefaults;
+
 // HTTP 요청의 인증·인가 규칙을 정의하는 Spring Security 설정 지정
 @Configuration
 @EnableWebSecurity
@@ -36,15 +38,20 @@ public class SecurityConfig {
                 // Cookie 인증에서는 브라우저가 Cookie를 자동 전송하므로 SPA용 CSRF Token Cookie·헤더 대조 활성화
                 // 프런트는 XSRF-TOKEN Cookie 값을 읽어 상태 변경 요청의 X-XSRF-TOKEN 헤더에 함께 전송
                 .csrf(csrf -> csrf.spa())
-                // 이후 JWT 인증을 적용할 수 있도록 서버 세션 생성 금지
+                // JWT 인증 상태를 서버 세션에 저장하지 않고 Access Token Cookie로 매 요청마다 복원
+                // OAuth2 인가 요청의 임시 state 저장 방식은 다음 단계에서 Cookie 기반으로 별도 구성
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 // 회원가입·로그인 등 인증 시작 경로만 비인증 접근 허용
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/v1/auth/**").permitAll()
+                        // 카카오 로그인 시작 주소와 카카오 Callback 주소를 Spring Security OAuth2 Filter가 처리하도록 허용
+                        .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
                         .anyRequest().authenticated()
                 )
+                // /oauth2/authorization/kakao 요청을 카카오 인가 화면으로 보내고 Callback 처리를 시작하도록 OAuth2 Login 활성화
+                .oauth2Login(withDefaults())
                 // 인증 정보 없는 보호 API 요청을 리다이렉트 대신 401 상태로 응답
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))

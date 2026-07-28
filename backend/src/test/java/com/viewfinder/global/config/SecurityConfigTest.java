@@ -21,6 +21,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -88,6 +89,21 @@ class SecurityConfigTest {
         mockMvc.perform(get("/api/v1/auth/csrf"))
                 .andExpect(status().isNoContent())
                 .andExpect(cookie().exists("XSRF-TOKEN"));
+    }
+
+    @Test
+    void redirectsKakaoLoginStartEndpointToKakaoAuthorizationPage() throws Exception {
+        mockMvc.perform(get("/oauth2/authorization/kakao"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", containsString(
+                        "https://kauth.kakao.com/oauth/authorize"
+                )))
+                .andExpect(header().string("Location", containsString(
+                        "client_id=test-kakao-rest-api-key"
+                )))
+                .andExpect(header().string("Location", containsString(
+                        "response_type=code"
+                )));
     }
 
     @Test
