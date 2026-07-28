@@ -15,6 +15,33 @@ spring:
       # 테이블 생성·변경은 Flyway SQL만 담당하고, Hibernate는 Entity와 DB 구조 일치 여부만 확인
       ddl-auto: validate
     show-sql: true
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            # backend/.env의 카카오 REST API 키를 OAuth2 Client ID로 주입
+            client-id: ${KAKAO_REST_API_KEY}
+            # 카카오 Client Secret 사용 설정 시 backend/.env 값 주입, 미사용 시 빈 값 유지
+            client-secret: ${KAKAO_CLIENT_SECRET:}
+            # 카카오 Token 요청 본문에 Client 인증 정보를 전달하는 방식 지정
+            client-authentication-method: client_secret_post
+            # 인가 코드 교환 기반 로그인 흐름 지정
+            authorization-grant-type: authorization_code
+            # Spring Security 기본 Callback 경로를 카카오 Redirect URI와 일치하도록 지정
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope:
+              # 카카오 동의 항목에서 허용받을 닉네임·이메일 범위 요청
+              - profile_nickname
+              - account_email
+            client-name: Kakao
+        provider:
+          kakao:
+            # 카카오가 Spring 기본 제공 OAuth2 Provider가 아니므로 Endpoint 직접 등록
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            user-name-attribute: id
 
 jwt:
   # 로컬 실행 환경에서 주입한 HMAC 비밀키 사용
