@@ -10,7 +10,7 @@ on:
 permissions:
   contents: read
   # JaCoCo 결과를 PR 대화의 고정 갱신 댓글로 남길 권한
-  issues: write
+  pull-requests: write
   # Checkstyle SARIF 결과를 GitHub Code Scanning 경고로 업로드할 권한
   security-events: write
 
