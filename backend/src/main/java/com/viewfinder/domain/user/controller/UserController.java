@@ -14,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -88,5 +90,14 @@ public class UserController {
                         .createRefreshTokenCookie(reissueResult.refreshToken())
                         .toString())
                 .build();
+    }
+
+    // SPA가 읽을 XSRF-TOKEN Cookie 생성을 위해 Spring Security의 지연 CSRF Token 로딩을 요청
+    @GetMapping("/csrf")
+    public ResponseEntity<Void> csrf(CsrfToken csrfToken) {
+        // CsrfToken 파라미터 해석으로 Cookie 발급을 보장하고 Token 문자열은 응답 본문에 노출하지 않음
+        csrfToken.getToken();
+
+        return ResponseEntity.noContent().build();
     }
 }

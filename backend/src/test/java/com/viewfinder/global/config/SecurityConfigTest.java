@@ -23,6 +23,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 // 인증 경로 허용과 보호 경로 차단을 확인하는 MVC Security 테스트 지정
@@ -64,7 +66,26 @@ class SecurityConfigTest {
                                   "nickname": "viewfinder"
                                 }
                                 """))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/v1/auth/signup")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "user@example.com",
+                                  "password": "password1234",
+                                  "nickname": "viewfinder"
+                                }
+                                """))
                 .andExpect(status().isCreated());
+    }
+
+    @Test
+    void issuesCsrfTokenCookieForSpa() throws Exception {
+        mockMvc.perform(get("/api/v1/auth/csrf"))
+                .andExpect(status().isNoContent())
+                .andExpect(cookie().exists("XSRF-TOKEN"));
     }
 
     @Test

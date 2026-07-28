@@ -5,7 +5,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
@@ -24,8 +23,9 @@ public class SecurityConfig {
             JwtAuthenticationFilter jwtAuthenticationFilter
     ) throws Exception {
         return http
-                // 세션 기반 웹 폼이 아닌 REST API이므로 CSRF 검증 비활성화
-                .csrf(AbstractHttpConfigurer::disable)
+                // Cookie 인증에서는 브라우저가 Cookie를 자동 전송하므로 SPA용 CSRF Token Cookie·헤더 대조 활성화
+                // 프런트는 XSRF-TOKEN Cookie 값을 읽어 상태 변경 요청의 X-XSRF-TOKEN 헤더에 함께 전송
+                .csrf(csrf -> csrf.spa())
                 // 이후 JWT 인증을 적용할 수 있도록 서버 세션 생성 금지
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
